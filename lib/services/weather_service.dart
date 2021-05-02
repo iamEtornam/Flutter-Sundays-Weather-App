@@ -1,11 +1,11 @@
-import 'dart:ffi';
+
 
 import 'package:http/http.dart' as http;
 import 'package:weather_app/utils/api_keys.dart';
 
 class WeatherService {
   String _endpoint({double latitude, double longitude}) {
-    return 'https://api.openweathermap.org/data/2.5/forecast/daily?lat=$latitude&lon=$longitude&cnt=2&appid=$apiKey';
+    return 'https://api.openweathermap.org/data/2.5/forecast/daily?lat=$latitude&lon=$longitude&units=metric&cnt=2&appid=$apiKey';
   }
 
   Future<http.Response> getWeatherService(
