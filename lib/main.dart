@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg_provider/flutter_svg_provider.dart';
 import 'package:weather_app/models/weather_model.dart';
 import 'package:weather_app/services/weather_service.dart';
 import 'package:location/location.dart';
@@ -35,17 +34,17 @@ class _HomePageState extends State<HomePage> {
   final Location location = new Location();
   bool _serviceEnabled;
   PermissionStatus _permissionGranted;
-  LocationData _locationData;
+  WeatherModel _weatherModel;
 
-  Future<WeatherModel> getWeatherData() async {
-    WeatherModel _weatherModel;
-    if (_locationData != null)
+  getWeatherData({LocationData locationData}) async {
+    if (locationData != null)
       await _weatherService
           .getWeatherService(
-              latitude: _locationData.latitude,
-              longitude: _locationData.longitude)
+              latitude: locationData.latitude,
+              longitude: locationData.longitude)
           .then((response) {
         Map body = jsonDecode(response.body);
+        debugPrint('$body');
         if (response.statusCode == 200) {
           _weatherModel = WeatherModel.fromJson(body);
         } else {
@@ -56,7 +55,7 @@ class _HomePageState extends State<HomePage> {
       }).timeout(Duration(seconds: 60), onTimeout: () {
         _weatherModel = null;
       });
-    return _weatherModel;
+    setState(() {});
   }
 
 //we are asking for permission
@@ -77,23 +76,14 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    _locationData = await location.getLocation();
-    setState(() {
-      
-    });
+    LocationData _locationData = await location.getLocation();
+    getWeatherData(locationData: _locationData);
   }
 
   @override
   void initState() {
     askPermission();
-    getWeatherData(); //TODO: refactor this to a local variable
     super.initState();
-  }
-
-  @override
-  void dispose() {
-    // TODO: implement dispose
-    super.dispose();
   }
 
   @override
@@ -109,7 +99,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       body: FutureBuilder<WeatherModel>(
-          future: getWeatherData(),
+          future: Future.value(_weatherModel),
           builder: (context, snapshot) {
             switch (snapshot.connectionState) {
               case ConnectionState.none:
@@ -117,6 +107,9 @@ class _HomePageState extends State<HomePage> {
               case ConnectionState.waiting:
                 return Center(child: CircularProgressIndicator());
               default:
+                if (snapshot.data == null) {
+                  return Center(child: Text('No weather data available'));
+                }
                 return Padding(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -146,10 +139,11 @@ class _HomePageState extends State<HomePage> {
                           Image(
                             width: MediaQuery.of(context).size.width,
                             height: MediaQuery.of(context).size.width,
-                            fit: BoxFit.fill,
-                            image: Svg('assets/cloud.svg'),
+                            fit: BoxFit.contain,
+                            image: NetworkImage(
+                                'http://openweathermap.org/img/wn/${snapshot.data.list[0].weather[0].icon}@4x.png'),
                           ),
-                          Text('19°',
+                          Text('${snapshot.data.list[0].temp.day}°',
                               style:
                                   TextStyle(color: Colors.black, fontSize: 21)),
                         ],
@@ -168,7 +162,8 @@ class _HomePageState extends State<HomePage> {
                             width: 30,
                           ),
                           Image(
-                            image: Svg('assets/sun.svg'),
+                            image: NetworkImage(
+                                'http://openweathermap.org/img/wn/${snapshot.data.list[1].weather[0].icon}@2x.png'),
                             width: 25,
                             height: 25,
                           ),
@@ -176,7 +171,7 @@ class _HomePageState extends State<HomePage> {
                             width: 15,
                           ),
                           Text(
-                            '22°',
+                            '${snapshot.data.list[1].temp.day}°',
                             style: TextStyle(
                                 color: Colors.black,
                                 fontWeight: FontWeight.w600),
